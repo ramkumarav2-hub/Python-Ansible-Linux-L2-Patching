@@ -10,8 +10,7 @@ Date: 2025-11-23
 
 Purpose
 
-This User Guide provides instructions for executing Linux Level-2 patching tasks using a Python script integrated with Ansible playbooks. 
-It explains the steps, menu options, workflow, and sample outputs for clarity.
+This document describes the workflow to run Linux Level-2 patching tasks using a Python launcher that integrates Ansible playbooks. The script presents a menu-driven interface for Pre-requisite, Precheck, Patching (with reboot confirmation), and Download-only operations.
 
 Prerequisites
 

@@ -1,0 +1,38 @@
+
+---
+- name: Check disk space and download updates
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    threshold_mb: 1024   # Minimum free space in MB (adjust as needed)
+    download_path: "/var/cache/yum"
+
+  tasks:
+    - name: Check free space on root
+      command: df -m /
+      register: root_space
+      changed_when: false
+
+    - name: Check free space on yum cache path
+      command: df -m {{ download_path }}
+      register: yum_space
+      changed_when: false
+
+    - name: Extract free space values
+      set_fact:
+        root_free: "{{ root_space.stdout_lines[-1].split()[3] | int }}"
+        yum_free: "{{ yum_space.stdout_lines[-1].split()[3] | int }}"
+
+    - name: Fail if root or yum cache space is below threshold
+      fail:
+        msg: "Insufficient disk space! Root={{ root_free }}MB, Yum Cache={{ yum_free }}MB (Threshold={{ threshold_mb }}MB)"
+      when: root_free < threshold_mb or yum_free < threshold_mb
+
+    - name: Download updates only (YUM)
+      yum:
+        name: "*"
+        state: latest
+        download_only: yes
+

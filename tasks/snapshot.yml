@@ -1,0 +1,25 @@
+---
+- name: Check datastore space and take snapshot using vmware_guest
+  hosts: all
+  connection: local
+  gather_facts: no
+  vars:
+    vcenter_hostname: "hagdccvcs01.cruises.princess.com"
+    vcenter_username: "hal-rv01204@HollandAmerica.com"
+    vcenter_password: "Blueberry!476"
+    validate_certs: false
+
+  tasks:
+    - name: Gather VM info
+      vmware_guest:
+        hostname: "{{ vcenter_hostname }}"
+        username: "{{ vcenter_username }}"
+        password: "{{ vcenter_password }}"
+        validate_certs: "{{ validate_certs }}"
+        name: "{{ inventory_hostname }}"
+        #state: poweredon
+      register: vm_info
+
+    - name:
+      debug:
+        var: vm_info.stdout_lines

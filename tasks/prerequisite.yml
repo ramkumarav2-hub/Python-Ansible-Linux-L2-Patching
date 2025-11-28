@@ -1,0 +1,82 @@
+---
+  - name: Playbook
+    hosts: all
+    become: yes
+    tasks:
+      - name: Adding the host entry in /etc/hosts file
+        lineinfile:
+          path: "/etc/hosts"
+          line: 10.57.14.22 lxpc1548.cruises.princess.com lxpc1548
+        ignore_errors: true
+        check_mode: false
+
+      - name: Clean subscription-manager
+        command: subscription-manager clean
+
+      - name: Clean YUM cache
+        command: yum clean all
+
+      - name: Remove YUM cache directory
+        file:
+          path: /var/cache/yum
+          state: absent
+
+      - name: Remove RedHat repo file
+        file:
+          path: /etc/yum.repos.d/redhat.repo
+          state: absent
+        ignore_errors: yes
+
+#      - name: Remove any redhat* repo file
+#        shell: rm -rf /etc/yum.repos.d/redhat*
+#        args:
+#          warn: false
+
+      - name: Checking katello files/packages
+        shell:
+          cmd: rpm -qa|grep -i katello
+        register: katello
+        failed_when: katello.rc == 1
+        ignore_errors: true
+        changed_when: false
+        check_mode: false
+
+      - name: Removing katello
+        shell:
+          cmd: yum remove $(rpm -qa|grep -i katello) -y
+        ignore_errors: true
+        check_mode: false
+
+      - name: Curl
+        shell:
+          cmd: curl --insecure --output katello-ca-consumer-latest.noarch.rpm https://lxpc1548.cruises.princess.com/pub/katello-ca-consumer-latest.noarch.rpm
+        check_mode: false
+
+      - name: Installing Katello-agent
+        shell:
+          cmd: rpm -ivh katello-ca-consumer-latest.noarch.rpm
+        check_mode: false
+
+      - name: checking if OS version is RHEL 7 / Registering the server to satellite
+        shell:
+          cmd: subscription-manager register --org="HAL_Organization" --activationkey="rhel-7" --force
+        when: ansible_distribution_major_version == '7'
+        check_mode: false
+
+      - name: checking if OS version is RHEL 8 / Registering the server to satellite
+        shell:
+          cmd: subscription-manager register --org="HAL_Organization" --activationkey="rhel-8" --force
+        when: ansible_distribution_major_version == '8'
+        check_mode: false
+
+      - name: checking if OS version is RHEL 9 / Registering the server to satellite
+        shell:
+          cmd: subscription-manager register --org="HAL_Organization" --activationkey="rhel-9" --force
+        when: ansible_distribution_major_version == '9'
+        check_mode: false
+
+      - shell: yum list kernel
+        register: kernel_v
+
+      - debug:
+          var: kernel_v.stdout_lines

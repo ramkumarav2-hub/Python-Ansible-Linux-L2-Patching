@@ -1,0 +1,55 @@
+
+---
+- name: Upload and Run Precheck Script
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Upload precheck script to server
+      copy:
+        src: /home/rvi2815-2/linux_patching/shell/precheck.sh
+        dest: /root/precheck.sh
+        mode: '0777'
+
+    - name: Execute precheck script
+      shell: sh /root/precheck.sh
+      register: precheckoutput
+
+    - name: Combine precheck output into single file
+      shell: cat /tmp/pre_check* > /tmp/precheck-{{ inventory_hostname }}-{{ ansible_date_time.date }}
+
+    - name: Fetch precheck output from server
+      fetch:
+        src: "/tmp/precheck-{{ inventory_hostname }}-{{ ansible_date_time.date }}"
+        dest: "/lxarc2/GCC/ramkumar/special_precheckfile/precheck-{{ inventory_hostname }}-{{ ansible_date_time.date }}"
+        flat: yes
+
+# Second Play for Disk Space Alert
+- name: Disk Space Alert
+  hosts: all
+  become: yes
+  gather_facts: no
+
+  vars:
+    mounts: ["/", "/var", "/usr", "/opt", "/etc"]
+    threshold: 80
+
+  tasks:
+    - name: Check disk usage for critical mounts
+      shell: |
+        for m in {{ mounts | join(' ') }}; do
+          if mountpoint -q $m; then
+            usage=$(df -hP $m | awk 'NR==2 {gsub("%","",$5); print $5}')
+            if [ $usage -gt {{ threshold }} ]; then
+              echo "ALERT: $m usage is $usage% (Threshold: {{ threshold }}%)"
+            fi
+          else
+            echo "WARNING: $m is not mounted"
+          fi
+        done
+      register: disk_alert
+      changed_when: false
+
+    - name: Show disk usage alerts
+      debug:
+        msg: "{{ disk_alert.stdout_lines }}"

@@ -1,0 +1,113 @@
+---
+- name: Patch and take pre and postcheck with Validation
+  hosts: all
+  become: yes
+ #gather_facts: no
+
+- name: Upload and Run Precheck Script
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Upload precheck script to server
+      copy:
+        src: /home/rvi2815-2/linux_patching/shell/precheck.sh
+        dest: /root/precheck.sh
+        mode: '0777'
+
+    - name: Execute precheck script
+      shell: sh /root/precheck.sh
+      register: precheckoutput
+
+    - name: Combine precheck output into single file
+      shell: cat /tmp/pre_check* > /tmp/precheck-{{ inventory_hostname }}
+
+    - name: Fetch precheck output from server
+      fetch:
+        src: "/tmp/precheck-{{ inventory_hostname }}"
+        dest: "/lxarc2/GCC/ramkumar/special_precheckfile/precheck-{{ inventory_hostname }}"
+        flat: yes
+
+- name: Pre-validation system check
+  hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Get mount point count before patching
+      shell: df -hT | grep -v 'tmpfs' | wc -l
+      register: mount_count_before
+
+    - name: Save count for later use
+      set_fact:
+        mount_before: "{{ mount_count_before.stdout }}"
+
+- name: Patching and Reboot
+  hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Apply all available patches (RHEL/CentOS)
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Clean up package cache
+      shell: yum clean all
+
+    - name: Reboot if required
+      reboot:
+        msg: "Rebooting after patching"
+        connect_timeout: 5
+        reboot_timeout: 600
+
+- name: Post-validation system check
+  hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Get mount point count after patching
+      shell: df -hT | grep -v 'tmpfs' | wc -l
+      register: mount_count_after
+
+- name: Upload and Run Postcheck Script
+  hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Upload postcheck script to server
+      copy:
+        src: /home/rvi2815-2/linux_patching/shell/postcheck.sh
+        dest: /root/postcheck.sh
+        mode: '0777'
+
+    - name: Execute postcheck script
+      shell: sh /root/postcheck.sh
+      register: precheckoutput
+
+    - name: Combine precheck output into single file
+      shell: cat /tmp/post_check* > /tmp/postcheck-{{ inventory_hostname }}
+
+    - name: Fetch precheck output from server
+      fetch:
+        src: "/tmp/postcheck-{{ inventory_hostname }}"
+        dest: "/lxarc2/GCC/ramkumar/special_postcheckfile/postcheck-{{ inventory_hostname }}"
+        flat: yes
+    
+    - name: Combine precheck and postcheck files
+      shell: cat /lxarc2/GCC/ramkumar/special_precheckfile/precheck-{{ inventory_hostname }} /lxarc2/GCC/ramkumar/special_postcheckfile/postcheck-{{ inventory_hostname }} > /tmp/combined-check-{{ inventory_hostname }}-{{ ansible_date_time.date }}
+
+- name: Final System validation
+  hosts: all
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Compare mount point counts
+      fail:
+        msg: "ALERT: Mount point count changed! Before={{ mount_before }}, After={{ mount_count_after.stdout }}"
+      when: mount_before != mount_count_after.stdout
+
+    - name: Show success message
+      debug:
+        msg: "Mount point count is SAME before and after patching"
+      when: mount_before == mount_count_after.stdout
+

@@ -35,11 +35,16 @@ Execution Steps (CLI)
 2. Run the script:
 python3 patching_bundle.py
 3. Select the desired option from the menu:
+   
 •	Pre-requisite
+
 •	Precheck
+
 •	Patching
+
 •	Download all packages only
-4. Provide server details when prompted.
+
+5. Provide server details when prompted.
    
 Menu Display
 

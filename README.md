@@ -1,7 +1,11 @@
 Linux L2 Patching – User Guide
+
 Author: Ramkumar V
+
 Email: ramkumar.a.v@capgemini.com
+
 Version: 1.0.0
+
 Date: 2025-11-23
 
 Purpose

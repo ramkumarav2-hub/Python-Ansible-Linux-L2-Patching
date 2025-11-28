@@ -15,11 +15,17 @@ It explains the steps, menu options, workflow, and sample outputs for clarity.
 
 Prerequisites
 
+
 •	Python 3 installed on the control node
+
 •	Ansible installed and configured
+
 •	SSH access to target Linux servers
+
 •	Sudo privileges on target systems
+
 •	Network access to repositories
+
 •	Script location: /home/rvi2815-2/linux_patching/patching_bundle.py
 
 Execution Steps (CLI)
@@ -40,6 +46,7 @@ Menu Display
 ##########################################################################################
 #                              Linux L2 Patching                                         #
 ##########################################################################################
+
 Please select the task you want to run:
 1. Pre-requisite
 2. Precheck
